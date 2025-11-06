@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -490,6 +491,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="header">
         <h1>
@@ -504,7 +506,7 @@
             <!-- Form Card -->
             <div class="card">
                 <h2>📝 Automation Configuration</h2>
-                
+
                 <div class="tabs">
                     <button class="tab active" onclick="switchTab('mbtiles')">MBTiles</button>
                     <button class="tab" onclick="switchTab('xyztiles')">XYZ Tiles</button>
@@ -544,7 +546,8 @@
                         <div class="form-group">
                             <label>Upload Files</label>
                             <div class="file-input-wrapper">
-                                <input type="file" id="fileInput" multiple accept=".mbtiles" onchange="handleFileSelect(event)">
+                                <input type="file" id="fileInput" multiple accept=".mbtiles"
+                                    onchange="handleFileSelect(event)">
                                 <label for="fileInput" class="file-input-label">
                                     <span>📁</span>
                                     <span>Choose MBTiles files</span>
@@ -600,7 +603,8 @@
                         <div class="form-group">
                             <label>Upload Files</label>
                             <div class="file-input-wrapper">
-                                <input type="file" id="fileInputXYZ" multiple accept=".xyz" onchange="handleFileSelectXYZ(event)">
+                                <input type="file" id="fileInputXYZ" multiple accept=".xyz"
+                                    onchange="handleFileSelectXYZ(event)">
                                 <label for="fileInputXYZ" class="file-input-label">
                                     <span>📁</span>
                                     <span>Choose XYZ files</span>
@@ -626,7 +630,7 @@
             <!-- Progress Card -->
             <div class="card progress-section" id="progressSection">
                 <h2>📊 Progress</h2>
-                
+
                 <div class="progress-info">
                     <span id="progressText">Waiting to start...</span>
                     <span id="progressStatus" class="status-badge status-queued">Queued</span>
@@ -645,7 +649,8 @@
                     <button class="btn btn-control btn-pause" id="pauseBtn" onclick="pauseAutomation()">
                         ⏸️ Pause
                     </button>
-                    <button class="btn btn-control btn-resume" id="resumeBtn" onclick="resumeAutomation()" style="display: none;">
+                    <button class="btn btn-control btn-resume" id="resumeBtn" onclick="resumeAutomation()"
+                        style="display: none;">
                         ▶️ Resume
                     </button>
                     <button class="btn btn-control btn-abort" id="abortBtn" onclick="abortAutomation()">
@@ -688,7 +693,7 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:3000';
+        const API_URL = 'http://localhost:3001';
         let currentSessionId = null;
         let eventSource = null;
         let selectedFiles = [];
@@ -696,13 +701,13 @@
         let currentTab = 'mbtiles';
 
         // Check login status
-        window.onload = function() {
+        window.onload = function () {
             const isLoggedIn = localStorage.getItem('isLoggedIn');
             if (isLoggedIn !== 'true') {
                 window.location.href = 'login.html';
                 return;
             }
-            
+
             // Start queue status polling
             updateQueueStatus();
             setInterval(updateQueueStatus, 3000);
@@ -710,11 +715,11 @@
 
         function switchTab(tab) {
             currentTab = tab;
-            
+
             // Update tab buttons
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
-            
+
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.getElementById(`${tab}-form`).classList.add('active');
@@ -730,18 +735,36 @@
 
         function handleFileSelect(event) {
             selectedFiles = Array.from(event.target.files);
+
+            // DENGAN ELECTRON: Dapatkan full path
+            const filePathsWithInfo = selectedFiles.map(file => ({
+                name: file.name,
+                path: file.path,  // INI YANG PENTING! Hanya ada di Electron
+                size: file.size
+            }));
+
+            console.log('Full file paths:', filePathsWithInfo);
             displayFileList(selectedFiles, 'fileList');
         }
 
         function handleFileSelectXYZ(event) {
             selectedFilesXYZ = Array.from(event.target.files);
+
+            // DENGAN ELECTRON: Dapatkan full path
+            const filePathsWithInfo = selectedFilesXYZ.map(file => ({
+                name: file.name,
+                path: file.path,  // INI YANG PENTING! Hanya ada di Electron
+                size: file.size
+            }));
+
+            console.log('Full file paths:', filePathsWithInfo);
             displayFileList(selectedFilesXYZ, 'fileListXYZ');
         }
 
         function displayFileList(files, containerId) {
-const container = document.getElementById(containerId);
+            const container = document.getElementById(containerId);
             container.innerHTML = '';
-            
+
             if (files.length === 0) return;
 
             files.forEach((file, index) => {
@@ -806,7 +829,7 @@ const container = document.getElementById(containerId);
 
             // Get file paths (in real scenario, you'd need to handle file upload differently)
             // For now, we'll use file names as paths
-            const filePaths = files.map(f => f.name);
+            const filePaths = files.map(f => f.path);
 
             const data = {
                 sessionId: currentSessionId,
@@ -837,10 +860,10 @@ const container = document.getElementById(containerId);
                 if (result.success) {
                     // Show progress section
                     document.getElementById('progressSection').classList.add('active');
-                    
+
                     // Connect to SSE for progress updates
                     connectToProgressStream(currentSessionId);
-                    
+
                     alert(`Job submitted successfully!\nSession ID: ${currentSessionId}\nQueue Position: ${result.queuePosition}`);
                 } else {
                     alert(`Error: ${result.error}`);
@@ -891,7 +914,7 @@ const container = document.getElementById(containerId);
 
             // Update status badge
             progressStatus.className = 'status-badge';
-            switch(data.status) {
+            switch (data.status) {
                 case 'queued':
                     progressStatus.classList.add('status-queued');
                     progressStatus.textContent = 'Queued';
@@ -950,16 +973,16 @@ const container = document.getElementById(containerId);
             const resultsList = document.getElementById('resultsList');
             const resultItem = document.createElement('div');
             resultItem.className = `result-item ${status}`;
-            
+
             const icon = status === 'success' ? '✓' : status === 'error' ? '✗' : '⚠';
-            
+
             resultItem.innerHTML = `
                 <div>
                     <strong>${icon} ${fileName}</strong>
                     <div style="font-size: 11px; margin-top: 3px; opacity: 0.8;">${message}</div>
                 </div>
             `;
-            
+
             resultsList.insertBefore(resultItem, resultsList.firstChild);
         }
 
@@ -1068,7 +1091,7 @@ const container = document.getElementById(containerId);
                     method: 'DELETE'
                 });
                 const result = await response.json();
-                
+
                 if (result.success) {
                     updateQueueStatus();
                     alert('Job removed from queue');
@@ -1082,4 +1105,5 @@ const container = document.getElementById(containerId);
         }
     </script>
 </body>
+
 </html>

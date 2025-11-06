@@ -1,6 +1,6 @@
 const express = require('express')
 const app = express()
-const port = 3000
+const port = 3001
 
 const cors = require('cors')
 
@@ -151,7 +151,7 @@ async function processAutomationMbtiles(sessionId, data) {
     const { resolusi, akurasi, tahunSurvey, sumberData, nomorHP, filePaths } = data;
 
     if (!browser) {
-        throw new Error('Browser not initialized. Please login first.');
+        throw new Error('Browser not initialized. Please login first or logout and re-login.');
     }
 
     // Initialize automation state
@@ -222,8 +222,8 @@ async function processAutomationMbtiles(sessionId, data) {
 
             await checkPauseAndAbort(sessionId);
 
-            await iframe.locator('xpath=//*[@id="mslink2"]').click();
-            await iframe.getByText('upload', { exact: true }).click();
+            // await iframe.locator('xpath=//*[@id="mslink2"]').click();
+            // await iframe.getByText('upload', { exact: true }).click();
 
             // Report success
             sendProgress(sessionId, {
@@ -345,8 +345,8 @@ async function processAutomationXyztiles(sessionId, data) {
 
             await checkPauseAndAbort(sessionId);
 
-            await iframe.locator('xpath=//*[@id="mslink2"]').click();
-            await iframe.getByText('upload', { exact: true }).click();
+            // await iframe.locator('xpath=//*[@id="mslink2"]').click();
+            // await iframe.getByText('upload', { exact: true }).click();
 
             // Report success
             sendProgress(sessionId, {
@@ -570,3 +570,5 @@ app.post('/automation_xyztiles', async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 })
+
+module.exports = app;
