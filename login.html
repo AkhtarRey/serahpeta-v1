@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Automation System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: white;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .login-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status-message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status-message.loading {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #0c5460;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            text-align: left;
+        }
+
+        .info-box h3 {
+            color: #2196F3;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .info-box ul {
+            color: #666;
+            font-size: 13px;
+            margin-left: 20px;
+        }
+
+        .info-box li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">🔐</div>
+        <h1>Welcome</h1>
+        <p>Please login to access the automation system</p>
+        
+        <button class="login-btn" id="loginBtn" onclick="handleLogin()">
+            Login to System
+        </button>
+
+        <div class="status-message" id="statusMessage"></div>
+
+        <div class="info-box">
+            <h3>📋 Instructions:</h3>
+            <ul>
+                <li>Click the login button</li>
+                <li>A browser window will open</li>
+                <li>Login manually on the website</li>
+                <li>Wait for automatic verification</li>
+                <li>You'll be redirected automatically</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+
+        async function handleLogin() {
+            const btn = document.getElementById('loginBtn');
+            const statusMsg = document.getElementById('statusMessage');
+
+            // Disable button
+            btn.disabled = true;
+            btn.textContent = 'Logging in...';
+
+            // Show loading message
+            statusMsg.className = 'status-message loading';
+            statusMsg.innerHTML = '<span class="spinner"></span>Opening browser for login... Please complete login manually.';
+
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.text();
+
+                if (result === 'Login Success') {
+                    statusMsg.className = 'status-message success';
+                    statusMsg.textContent = '✓ Login successful! Redirecting...';
+
+                    // Save login state
+                    localStorage.setItem('isLoggedIn', 'true');
+                    localStorage.setItem('loginTime', new Date().toISOString());
+
+                    // Redirect after 1 second
+                    setTimeout(() => {
+                        window.location.href = 'automation.html';
+                    }, 1000);
+                } else {
+                    throw new Error('Login failed');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                statusMsg.className = 'status-message error';
+                statusMsg.textContent = '✗ Login failed. Please try again.';
+                
+                btn.disabled = false;
+                btn.textContent = 'Login to System';
+            }
+        }
+
+        // Check if already logged in
+        window.onload = function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            if (isLoggedIn === 'true') {
+                const statusMsg = document.getElementById('statusMessage');
+                statusMsg.className = 'status-message success';
+                statusMsg.textContent = 'Already logged in. Redirecting...';
+                
+                setTimeout(() => {
+                    window.location.href = 'automation.html';
+                }, 1000);
+            }
+        };
+    </script>
+</body>
+</html>
