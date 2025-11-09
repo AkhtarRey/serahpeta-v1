@@ -1,22 +1,41 @@
 const express = require('express')
 const app = express()
-const port = 3001
+
+const portfinder = require('portfinder');
+
+// Export promise agar main.js bisa tahu port-nya
+const serverReady = new Promise((resolve, reject) => {
+    const DEFAULT_PORT = 3001;
+    portfinder.getPortPromise({ port: DEFAULT_PORT, stopPort: DEFAULT_PORT + 100 })
+        .then(port => {
+            app.listen(port, () => {
+                console.log(`✅ Server berjalan di port ${port}`);
+                resolve(port);
+            });
+        })
+        .catch(err => {
+            console.error('❌ Gagal menemukan port kosong:', err);
+            reject(err);
+        });
+});
+
 
 const cors = require('cors')
 
 const { chromium } = require('playwright');
 
-const getChromePath = () => {
-    let chromePath = process.env.PLAYWRIGHT_CHROME_PATH;
+const path = require('path');
+const fs = require('fs');
 
-    if (chromePath) {
-        console.log(`Menggunakan Chrome dari variabel lingkungan: ${chromePath}`);
-        return chromePath;
-    } else {
-        console.log('Variabel lingkungan PLAYWRIGHT_CHROME_PATH tidak ditemukan. Playwright akan mencoba mendeteksi Chrome secara otomatis.');
-        return undefined;
+const getChromePath = () => {
+    const localPath = path.join(__dirname, 'playwright', 'chromium', 'chrome.exe');
+    if (fs.existsSync(localPath)) {
+        console.log('Menggunakan Chromium lokal dari folder build.');
+        return localPath;
     }
-}
+    console.log('Chromium lokal tidak ditemukan. Gunakan default Playwright.');
+    return undefined;
+};
 
 let browser = null; // Store browser instance globally
 
@@ -83,9 +102,9 @@ app.get('/automation/queue/status', (req, res) => {
 app.delete('/automation/queue/:sessionId', (req, res) => {
     const sessionId = req.params.sessionId;
     const initialLength = global.automationQueue.length;
-    
+
     global.automationQueue = global.automationQueue.filter(job => job.sessionId !== sessionId);
-    
+
     if (global.automationQueue.length < initialLength) {
         res.json({ success: true, message: 'Job removed from queue' });
     } else {
@@ -239,7 +258,7 @@ async function processAutomationMbtiles(sessionId, data) {
                 results.push({ file: filePaths[i], status: 'aborted' });
                 break;
             }
-            
+
             console.log(`Error mengunggah file ${i + 1}:`, error)
 
             // Report error
@@ -362,7 +381,7 @@ async function processAutomationXyztiles(sessionId, data) {
                 results.push({ file: filePaths[i], status: 'aborted' });
                 break;
             }
-            
+
             console.log(`Error mengunggah file ${i + 1}:`, error)
 
             // Report error
@@ -406,7 +425,7 @@ async function processQueue() {
 
         try {
             console.log(`Processing job: ${job.sessionId} (${job.type})`);
-            
+
             sendProgress(job.sessionId, {
                 status: 'queue_started',
                 message: 'Job started from queue'
@@ -422,7 +441,7 @@ async function processQueue() {
             job.resolve({ success: true, results, sessionId: job.sessionId });
         } catch (error) {
             console.log(`Error processing job ${job.sessionId}:`, error);
-            
+
             sendProgress(job.sessionId, {
                 status: 'queue_error',
                 message: `Job failed: ${error.message}`
@@ -465,10 +484,6 @@ function addToQueue(sessionId, type, data) {
     });
 }
 
-app.listen(port, () => {
-    console.log(`App listening on port ${port}`)
-})
-
 app.post('/login', async (req, res) => {
     try {
         const chromePath = getChromePath();
@@ -501,7 +516,7 @@ app.post('/login', async (req, res) => {
 
 app.post('/automation_mbtiles', async (req, res) => {
     const sessionId = req.body.sessionId || `session_${Date.now()}`;
-    
+
     try {
         const { resolusi, akurasi, tahunSurvey, sumberData, nomorHP, filePaths } = req.body;
 
@@ -523,8 +538,8 @@ app.post('/automation_mbtiles', async (req, res) => {
             });
 
         // Immediately respond that job is queued
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             sessionId,
             message: 'Job added to queue',
             queuePosition: global.automationQueue.length
@@ -537,7 +552,7 @@ app.post('/automation_mbtiles', async (req, res) => {
 
 app.post('/automation_xyztiles', async (req, res) => {
     const sessionId = req.body.sessionId || `session_${Date.now()}`;
-    
+
     try {
         const { resolusi, akurasi, tahunSurvey, sumberData, nomorHP, filePaths } = req.body;
 
@@ -559,8 +574,8 @@ app.post('/automation_xyztiles', async (req, res) => {
             });
 
         // Immediately respond that job is queued
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             sessionId,
             message: 'Job added to queue',
             queuePosition: global.automationQueue.length
@@ -571,4 +586,4 @@ app.post('/automation_xyztiles', async (req, res) => {
     }
 })
 
-module.exports = app;
+module.exports = { app, serverReady };

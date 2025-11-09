@@ -11,7 +11,7 @@
     "server": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "electron-builder",
-    "dist": "electron-builder --publish never",
+    "dist": "electron-builder --win nsis --publish never",
     "build:win": "electron-builder --win --publish never",
     "build:mac": "electron-builder --mac --publish never",
     "build:linux": "electron-builder --linux --publish never"
@@ -23,14 +23,23 @@
       "output": "dist"
     },
     "files": [
-      "**/*"
+      "main.js",
+      "index.js",
+      "preload.js",
+      "login.html",
+      "automation.html",
+      "playwright/**/*",
+      "node_modules/**/*",
+      "package.json"
     ],
     "asar": true,
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -46,7 +55,8 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "playwright": "^1.56.1"
+    "playwright": "^1.56.1",
+    "portfinder": "^1.0.38"
   },
   "devDependencies": {
     "electron": "^39.1.0",

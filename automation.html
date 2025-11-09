@@ -775,12 +775,18 @@
         // Initialize Firestore
         const db = getFirestore(app);
 
-        const API_URL = 'http://localhost:3001';
+        let API_URL = null;
         let currentSessionId = null;
         let eventSource = null;
         let selectedFiles = [];
         let selectedFilesXYZ = [];
         let currentTab = 'mbtiles';
+
+        // Terima port backend dari preload.js
+window.api.onServerPort((port) => {
+    API_URL = `http://localhost:${port}`;
+    console.log('✅ Connected to backend:', API_URL);
+});
 
         // Check login status
         window.onload = function () {

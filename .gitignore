@@ -30,6 +30,7 @@ coverage/
 # ===================================
 # User data dir for persistent context
 user-data/
+playwright/
 # Playwright default report outputs
 test-results/
 playwright-report/

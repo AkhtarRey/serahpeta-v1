@@ -1,15 +1,13 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-
-const { ipcMain, dialog } = require('electron');
 const fs = require('fs');
-
-// Import Express server
-const express_app = require('./index.js'); // Kita akan export dari server.js
+const { serverReady } = require('./index.js'); // ambil serverReady
 
 let mainWindow;
 
-function createWindow() {
+async function createWindow() {
+    const port = await serverReady; // tunggu server siap
+
     mainWindow = new BrowserWindow({
         width: 1400,
         height: 900,
@@ -26,8 +24,16 @@ function createWindow() {
     // Load the dashboard
     mainWindow.loadFile('login.html');
 
+        // kirim port ke frontend (HTML)
+    mainWindow.webContents.on('did-finish-load', () => {
+        mainWindow.webContents.send('server-port', port);
+    });
+
     // Open DevTools (optional)
-    mainWindow.webContents.openDevTools();
+    if (!app.isPackaged) {
+        mainWindow.webContents.openDevTools();
+    }
+
 
     mainWindow.on('closed', () => {
         mainWindow = null;

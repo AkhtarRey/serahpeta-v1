@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -118,7 +119,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .info-box {
@@ -147,12 +150,13 @@
         }
     </style>
 </head>
+
 <body>
     <div class="login-container">
         <div class="logo">🔐</div>
         <h1>Welcome</h1>
         <p>Please login to access the automation system</p>
-        
+
         <button class="login-btn" id="loginBtn" onclick="handleLogin()">
             Login to System
         </button>
@@ -172,7 +176,13 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:3001';
+        let API_URL = null;
+
+        // Terima port dari Electron (lewat preload.js)
+        window.api.onServerPort((port) => {
+            API_URL = `http://localhost:${port}`;
+            console.log('✅ Backend connected on', API_URL);
+        });
 
         async function handleLogin() {
             const btn = document.getElementById('loginBtn');
@@ -215,20 +225,20 @@
                 console.error('Login error:', error);
                 statusMsg.className = 'status-message error';
                 statusMsg.textContent = '✗ Login failed. Please try again.';
-                
+
                 btn.disabled = false;
                 btn.textContent = 'Login to System';
             }
         }
 
         // Check if already logged in
-        window.onload = function() {
+        window.onload = function () {
             const isLoggedIn = localStorage.getItem('isLoggedIn');
             if (isLoggedIn === 'true') {
                 const statusMsg = document.getElementById('statusMessage');
                 statusMsg.className = 'status-message success';
                 statusMsg.textContent = 'Already logged in. Redirecting...';
-                
+
                 setTimeout(() => {
                     window.location.href = 'automation.html';
                 }, 1000);
@@ -236,4 +246,5 @@
         };
     </script>
 </body>
+
 </html>
