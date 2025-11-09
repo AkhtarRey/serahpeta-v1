@@ -489,6 +489,69 @@
         .tab-content.active {
             display: block;
         }
+
+        .phone-input-container {
+            position: relative;
+        }
+
+        .phone-input-container input {
+            transition: border-color 0.3s ease;
+        }
+
+        .phone-input-container input.valid {
+            border-color: #4CAF50 !important;
+        }
+
+        .phone-input-container input.invalid {
+            border-color: #f44336 !important;
+        }
+
+        .phone-verification-message {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-size: 13px;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        .phone-verification-message.success {
+            background-color: #e8f5e9;
+            border: 1px solid #4CAF50;
+            color: #2e7d32;
+        }
+
+        .phone-verification-message.error {
+            background-color: #ffebee;
+            border: 1px solid #f44336;
+            color: #c62828;
+        }
+
+        .phone-verification-message.checking {
+            background-color: #fff3e0;
+            border: 1px solid #ff9800;
+            color: #e65100;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .verification-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+        }
     </style>
 </head>
 
@@ -540,7 +603,11 @@
 
                         <div class="form-group">
                             <label>Nomor HP</label>
-                            <input type="tel" id="nomorHP" name="nomorHP" placeholder="e.g., 08123456789" required>
+                            <div class="phone-input-container">
+                                <input type="tel" id="nomorHP" name="nomorHP" placeholder="e.g., 08123456789" required>
+                                <span id="verificationIcon" class="verification-icon"></span>
+                            </div>
+                            <div id="phoneMessage" class="phone-verification-message"></div>
                         </div>
 
                         <div class="form-group">
@@ -592,7 +659,12 @@
 
                         <div class="form-group">
                             <label>Nomor HP</label>
-                            <input type="tel" id="nomorHPXYZ" name="nomorHP" placeholder="e.g., 08123456789" required>
+                            <div class="phone-input-container">
+                                <input type="tel" id="nomorHPXYZ" name="nomorHP" placeholder="e.g., 08123456789"
+                                    required>
+                                <span id="verificationIconXYZ" class="verification-icon"></span>
+                            </div>
+                            <div id="phoneMessageXYZ" class="phone-verification-message"></div>
                         </div>
 
                         <div class="form-group">
@@ -682,7 +754,27 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB7m8i38i_X-IbVKAIJeLUrzLA-7dxjb1k",
+            authDomain: "serahpeta-56e9f.firebaseapp.com",
+            projectId: "serahpeta-56e9f",
+            storageBucket: "serahpeta-56e9f.firebasestorage.app",
+            messagingSenderId: "734805036031",
+            appId: "1:734805036031:web:fd8b3d1c9c66a5da04f5ca"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+
+        // Initialize Firestore
+        const db = getFirestore(app);
+
         const API_URL = 'http://localhost:3001';
         let currentSessionId = null;
         let eventSource = null;
@@ -698,12 +790,17 @@
                 return;
             }
 
+            // Setup real-time verification untuk kedua form
+            setupRealtimeVerification('nomorHP', 'phoneMessage', 'verificationIcon');
+            setupRealtimeVerification('nomorHPXYZ', 'phoneMessageXYZ', 'verificationIconXYZ');
+
             // Start queue status polling
             updateQueueStatus();
             setInterval(updateQueueStatus, 3000);
         };
 
-        function switchTab(tab) {
+        // EXPOSE FUNCTIONS TO WINDOW OBJECT
+        window.switchTab = function (tab) {
             currentTab = tab;
 
             // Update tab buttons
@@ -713,34 +810,208 @@
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.getElementById(`${tab}-form`).classList.add('active');
-        }
+        };
 
-        function handleLogout() {
+        window.handleLogout = function () {
             if (confirm('Are you sure you want to logout?')) {
                 localStorage.removeItem('isLoggedIn');
                 localStorage.removeItem('loginTime');
                 window.location.href = 'login.html';
             }
+        };
+
+        // Fungsi untuk verifikasi nomor HP
+        async function verifyPhoneNumber(phoneNumber) {
+            try {
+                // Normalisasi nomor HP (hapus spasi, strip, dll)
+                const normalizedPhone = phoneNumber.replace(/[\s\-\+]/g, '');
+
+                console.log('Verifying phone:', normalizedPhone);
+
+                // Query Firestore
+                const q = query(
+                    collection(db, 'authorized_users'),
+                    where('phoneNumber', '==', normalizedPhone),
+                    where('isActive', '==', true)
+                );
+
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    console.log('Phone not found or inactive');
+                    return {
+                        isValid: false,
+                        message: 'Nomor HP tidak terdaftar atau tidak aktif'
+                    };
+                }
+
+                console.log('Phone verified successfully');
+                return {
+                    isValid: true,
+                    message: 'Nomor HP terverifikasi',
+                    userData: querySnapshot.docs[0].data()
+                };
+            } catch (error) {
+                console.error('Error verifying phone number:', error);
+
+                // Handle specific Firebase errors
+                if (error.code === 'permission-denied') {
+                    return {
+                        isValid: false,
+                        message: 'Akses ditolak. Silakan hubungi administrator.'
+                    };
+                } else if (error.code === 'unavailable') {
+                    return {
+                        isValid: false,
+                        message: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.'
+                    };
+                } else {
+                    return {
+                        isValid: false,
+                        message: 'Terjadi kesalahan saat verifikasi: ' + error.message
+                    };
+                }
+            }
         }
 
-        // function handleFileSelect(event) {
-        //     selectedFiles = Array.from(event.target.files);
+        // Fungsi untuk menampilkan pesan verifikasi
+        function showVerificationMessage(inputId, messageId, iconId, type, message) {
+            const input = document.getElementById(inputId);
+            const messageEl = document.getElementById(messageId);
+            const iconEl = document.getElementById(iconId);
 
-        //     // DENGAN ELECTRON: Dapatkan full path
-        //     const filePathsWithInfo = selectedFiles.map(file => ({
-        //         name: file.name,
-        //         path: file.path,  // INI YANG PENTING! Hanya ada di Electron
-        //         size: file.size
-        //     }));
+            // Reset classes
+            input.classList.remove('valid', 'invalid');
+            messageEl.classList.remove('success', 'error', 'checking');
+            messageEl.style.display = 'none';
 
-        //     console.log('Full file paths:', filePathsWithInfo);
-        //     displayFileList(selectedFiles, 'fileList');
-        // }
+            if (type === 'checking') {
+                messageEl.className = 'phone-verification-message checking';
+                messageEl.innerHTML = '⏳ ' + message;
+                messageEl.style.display = 'block';
+                iconEl.textContent = '⏳';
+            } else if (type === 'success') {
+                input.classList.add('valid');
+                messageEl.className = 'phone-verification-message success';
+                messageEl.innerHTML = '✓ ' + message;
+                messageEl.style.display = 'block';
+                iconEl.textContent = '✓';
+                iconEl.style.color = '#4CAF50';
+            } else if (type === 'error') {
+                input.classList.add('invalid');
+                messageEl.className = 'phone-verification-message error';
+                messageEl.innerHTML = '✗ ' + message;
+                messageEl.style.display = 'block';
+                iconEl.textContent = '✗';
+                iconEl.style.color = '#f44336';
+            } else {
+                // Clear
+                iconEl.textContent = '';
+                iconEl.style.color = '';
+            }
+        }
 
-        //perbaikan grok
-        async function selectFiles(type) {
+        // Fungsi untuk setup real-time verification
+        function setupRealtimeVerification(inputId, messageId, iconId) {
+            let verificationTimeout;
+            const input = document.getElementById(inputId);
+
+            input.addEventListener('input', function (e) {
+                clearTimeout(verificationTimeout);
+
+                const phoneNumber = e.target.value.trim();
+
+                // Clear styling jika input kosong
+                if (phoneNumber.length === 0) {
+                    showVerificationMessage(inputId, messageId, iconId, 'clear', '');
+                    return;
+                }
+
+                // Validasi format dasar (minimal 10 digit)
+                if (phoneNumber.length < 10) {
+                    showVerificationMessage(inputId, messageId, iconId, 'error', 'Nomor HP minimal 10 digit');
+                    return;
+                }
+
+                // Validasi hanya angka
+                if (!/^[0-9+\s\-]+$/.test(phoneNumber)) {
+                    showVerificationMessage(inputId, messageId, iconId, 'error', 'Nomor HP hanya boleh berisi angka');
+                    return;
+                }
+
+                // Tampilkan status checking
+                showVerificationMessage(inputId, messageId, iconId, 'checking', 'Memverifikasi nomor HP...');
+
+                // Delay 500ms sebelum melakukan verifikasi ke Firestore
+                verificationTimeout = setTimeout(async () => {
+                    try {
+                        const result = await verifyPhoneNumber(phoneNumber);
+
+                        if (result.isValid) {
+                            showVerificationMessage(
+                                inputId,
+                                messageId,
+                                iconId,
+                                'success',
+                                'Nomor HP terverifikasi' + (result.userData?.name ? ` (${result.userData.name})` : '')
+                            );
+                        } else {
+                            showVerificationMessage(
+                                inputId,
+                                messageId,
+                                iconId,
+                                'error',
+                                result.message
+                            );
+                        }
+                    } catch (error) {
+                        showVerificationMessage(
+                            inputId,
+                            messageId,
+                            iconId,
+                            'error',
+                            'Gagal memverifikasi nomor HP'
+                        );
+                    }
+                }, 500); // Delay 500ms
+            });
+
+            // Event saat focus hilang (blur)
+            input.addEventListener('blur', function (e) {
+                const phoneNumber = e.target.value.trim();
+                if (phoneNumber.length > 0 && phoneNumber.length < 10) {
+                    showVerificationMessage(inputId, messageId, iconId, 'error', 'Nomor HP tidak valid');
+                }
+            });
+        }
+
+        function showPhoneMessage(type, message, formType = 'mbtiles') {
+            const errorId = formType === 'mbtiles' ? 'phoneError' : 'phoneErrorXYZ';
+            const successId = formType === 'mbtiles' ? 'phoneSuccess' : 'phoneSuccessXYZ';
+
+            const errorEl = document.getElementById(errorId);
+            const successEl = document.getElementById(successId);
+
+            if (type === 'error') {
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+                successEl.style.display = 'none';
+            } else {
+                successEl.textContent = message;
+                successEl.style.display = 'block';
+                errorEl.style.display = 'none';
+            }
+
+            // Hide message after 5 seconds
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+                successEl.style.display = 'none';
+            }, 5000);
+        }
+
+        window.selectFiles = async function (type) {
             const handler = type === 'mbtiles' ? 'select-mbtiles' : 'select-xyz';
-            const files = await window.api.invoke(handler); // pastikan preload expose
+            const files = await window.api.invoke(handler);
 
             if (type === 'mbtiles') {
                 selectedFiles = files;
@@ -750,22 +1021,8 @@
                 displayFileList(files, 'fileListXYZ');
             }
 
-            console.log('Selected files:', files); // PATH PASTI ADA
-        }
-
-        // function handleFileSelectXYZ(event) {
-        //     selectedFilesXYZ = Array.from(event.target.files);
-
-        //     // DENGAN ELECTRON: Dapatkan full path
-        //     const filePathsWithInfo = selectedFilesXYZ.map(file => ({
-        //         name: file.name,
-        //         path: file.path,  // INI YANG PENTING! Hanya ada di Electron
-        //         size: file.size
-        //     }));
-
-        //     console.log('Full file paths:', filePathsWithInfo);
-        //     displayFileList(selectedFilesXYZ, 'fileListXYZ');
-        // }
+            console.log('Selected files:', files);
+        };
 
         function displayFileList(files, containerId) {
             const container = document.getElementById(containerId);
@@ -777,47 +1034,93 @@
                 const fileItem = document.createElement('div');
                 fileItem.className = 'file-item';
                 fileItem.innerHTML = `
-                    <span>📄 ${file.name}</span>
-                    <button type="button" onclick="removeFile(${index}, '${containerId}')">Remove</button>
-                `;
+                <span>📄 ${file.name}</span>
+                <button type="button" onclick="removeFile(${index}, '${containerId}')">Remove</button>
+            `;
                 container.appendChild(fileItem);
             });
         }
 
-        function removeFile(index, containerId) {
+        window.removeFile = function (index, containerId) {
             if (containerId === 'fileList') {
                 selectedFiles.splice(index, 1);
                 displayFileList(selectedFiles, 'fileList');
-                document.getElementById('fileInput').value = '';
             } else {
                 selectedFilesXYZ.splice(index, 1);
                 displayFileList(selectedFilesXYZ, 'fileListXYZ');
-                document.getElementById('fileInputXYZ').value = '';
             }
-        }
+        };
 
-        function resetForm() {
+        window.resetForm = function () {
             document.getElementById('automationForm').reset();
             selectedFiles = [];
             document.getElementById('fileList').innerHTML = '';
-        }
+        };
 
-        function resetFormXYZ() {
+        window.resetFormXYZ = function () {
             document.getElementById('automationFormXYZ').reset();
             selectedFilesXYZ = [];
             document.getElementById('fileListXYZ').innerHTML = '';
-        }
+        };
 
         // Handle MBTiles form submission
         document.getElementById('automationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            const phoneNumber = document.getElementById('nomorHP').value;
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Disable button dan tampilkan loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>⏳</span><span>Verifying...</span>';
+
+            // Verifikasi nomor HP
+            const verification = await verifyPhoneNumber(phoneNumber);
+
+            if (!verification.isValid) {
+                // Tampilkan error
+                alert('❌ ' + verification.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>▶️</span><span>Start Automation</span>';
+                return;
+            }
+
+            // Jika valid, lanjutkan proses automation
+            alert('✅ ' + verification.message);
             await submitAutomation('mbtiles', selectedFiles);
+
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>▶️</span><span>Start Automation</span>';
         });
 
         // Handle XYZ form submission
         document.getElementById('automationFormXYZ').addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            const phoneNumber = document.getElementById('nomorHPXYZ').value;
+            const submitBtn = document.getElementById('submitBtnXYZ');
+
+            // Disable button dan tampilkan loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>⏳</span><span>Verifying...</span>';
+
+            // Verifikasi nomor HP
+            const verification = await verifyPhoneNumber(phoneNumber);
+
+            if (!verification.isValid) {
+                // Tampilkan error
+                alert('❌ ' + verification.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>▶️</span><span>Start Automation</span>';
+                return;
+            }
+
+            // Jika valid, lanjutkan proses automation
+            alert('✅ ' + verification.message);
             await submitAutomation('xyztiles', selectedFilesXYZ);
+
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>▶️</span><span>Start Automation</span>';
         });
 
         async function submitAutomation(type, files) {
@@ -833,8 +1136,7 @@
             // Generate session ID
             currentSessionId = `session_${Date.now()}`;
 
-            // Get file paths (in real scenario, you'd need to handle file upload differently)
-            // For now, we'll use file names as paths
+            // Get file paths
             const filePaths = files.map(f => f.path);
 
             const data = {
@@ -983,16 +1285,16 @@
             const icon = status === 'success' ? '✓' : status === 'error' ? '✗' : '⚠';
 
             resultItem.innerHTML = `
-                <div>
-                    <strong>${icon} ${fileName}</strong>
-                    <div style="font-size: 11px; margin-top: 3px; opacity: 0.8;">${message}</div>
-                </div>
-            `;
+            <div>
+                <strong>${icon} ${fileName}</strong>
+                <div style="font-size: 11px; margin-top: 3px; opacity: 0.8;">${message}</div>
+            </div>
+        `;
 
             resultsList.insertBefore(resultItem, resultsList.firstChild);
         }
 
-        async function pauseAutomation() {
+        window.pauseAutomation = async function () {
             if (!currentSessionId) return;
 
             try {
@@ -1004,9 +1306,9 @@
             } catch (error) {
                 console.error('Pause error:', error);
             }
-        }
+        };
 
-        async function resumeAutomation() {
+        window.resumeAutomation = async function () {
             if (!currentSessionId) return;
 
             try {
@@ -1018,9 +1320,9 @@
             } catch (error) {
                 console.error('Resume error:', error);
             }
-        }
+        };
 
-        async function abortAutomation() {
+        window.abortAutomation = async function () {
             if (!currentSessionId) return;
 
             if (!confirm('Are you sure you want to abort this automation?')) {
@@ -1036,7 +1338,7 @@
             } catch (error) {
                 console.error('Abort error:', error);
             }
-        }
+        };
 
         async function updateQueueStatus() {
             try {
@@ -1061,24 +1363,24 @@
                 const queueList = document.getElementById('queueList');
                 if (data.queue.length === 0) {
                     queueList.innerHTML = `
-                        <div class="empty-queue">
-                            <span>📭</span>
-                            <p>No jobs in queue</p>
-                        </div>
-                    `;
+                    <div class="empty-queue">
+                        <span>📭</span>
+                        <p>No jobs in queue</p>
+                    </div>
+                `;
                 } else {
                     queueList.innerHTML = '';
                     data.queue.forEach((job, index) => {
                         const queueItem = document.createElement('div');
                         queueItem.className = 'queue-item';
                         queueItem.innerHTML = `
-                            <div class="queue-item-info">
-                                <strong>#${index + 1} - ${job.type.toUpperCase()}</strong>
-                                <div><small>Files: ${job.totalFiles}</small></div>
-                                <div><small>Added: ${new Date(job.addedAt).toLocaleTimeString()}</small></div>
-                            </div>
-                            <button onclick="removeFromQueue('${job.sessionId}')">Remove</button>
-                        `;
+                        <div class="queue-item-info">
+                            <strong>#${index + 1} - ${job.type.toUpperCase()}</strong>
+                            <div><small>Files: ${job.totalFiles}</small></div>
+                            <div><small>Added: ${new Date(job.addedAt).toLocaleTimeString()}</small></div>
+                        </div>
+                        <button onclick="removeFromQueue('${job.sessionId}')">Remove</button>
+                    `;
                         queueList.appendChild(queueItem);
                     });
                 }
@@ -1087,7 +1389,7 @@
             }
         }
 
-        async function removeFromQueue(sessionId) {
+        window.removeFromQueue = async function (sessionId) {
             if (!confirm('Remove this job from queue?')) {
                 return;
             }
@@ -1108,7 +1410,7 @@
                 console.error('Remove from queue error:', error);
                 alert('Error removing job from queue');
             }
-        }
+        };
     </script>
 </body>
 
