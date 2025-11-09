@@ -545,14 +545,9 @@
 
                         <div class="form-group">
                             <label>Upload Files</label>
-                            <div class="file-input-wrapper">
-                                <input type="file" id="fileInput" multiple accept=".mbtiles"
-                                    onchange="handleFileSelect(event)">
-                                <label for="fileInput" class="file-input-label">
-                                    <span>📁</span>
-                                    <span>Choose MBTiles files</span>
-                                </label>
-                            </div>
+                            <button type="button" class="file-input-label" onclick="selectFiles('mbtiles')">
+                                <span>Choose MBTiles files</span>
+                            </button>
                             <div class="file-list" id="fileList"></div>
                         </div>
 
@@ -602,14 +597,9 @@
 
                         <div class="form-group">
                             <label>Upload Files</label>
-                            <div class="file-input-wrapper">
-                                <input type="file" id="fileInputXYZ" multiple accept=".xyz"
-                                    onchange="handleFileSelectXYZ(event)">
-                                <label for="fileInputXYZ" class="file-input-label">
-                                    <span>📁</span>
-                                    <span>Choose XYZ files</span>
-                                </label>
-                            </div>
+                            <button type="button" class="file-input-label" onclick="selectFiles('xyztiles')">
+                                <span>Choose XYZ files</span>
+                            </button>
                             <div class="file-list" id="fileListXYZ"></div>
                         </div>
 
@@ -733,33 +723,49 @@
             }
         }
 
-        function handleFileSelect(event) {
-            selectedFiles = Array.from(event.target.files);
+        // function handleFileSelect(event) {
+        //     selectedFiles = Array.from(event.target.files);
 
-            // DENGAN ELECTRON: Dapatkan full path
-            const filePathsWithInfo = selectedFiles.map(file => ({
-                name: file.name,
-                path: file.path,  // INI YANG PENTING! Hanya ada di Electron
-                size: file.size
-            }));
+        //     // DENGAN ELECTRON: Dapatkan full path
+        //     const filePathsWithInfo = selectedFiles.map(file => ({
+        //         name: file.name,
+        //         path: file.path,  // INI YANG PENTING! Hanya ada di Electron
+        //         size: file.size
+        //     }));
 
-            console.log('Full file paths:', filePathsWithInfo);
-            displayFileList(selectedFiles, 'fileList');
+        //     console.log('Full file paths:', filePathsWithInfo);
+        //     displayFileList(selectedFiles, 'fileList');
+        // }
+
+        //perbaikan grok
+        async function selectFiles(type) {
+            const handler = type === 'mbtiles' ? 'select-mbtiles' : 'select-xyz';
+            const files = await window.api.invoke(handler); // pastikan preload expose
+
+            if (type === 'mbtiles') {
+                selectedFiles = files;
+                displayFileList(files, 'fileList');
+            } else {
+                selectedFilesXYZ = files;
+                displayFileList(files, 'fileListXYZ');
+            }
+
+            console.log('Selected files:', files); // PATH PASTI ADA
         }
 
-        function handleFileSelectXYZ(event) {
-            selectedFilesXYZ = Array.from(event.target.files);
+        // function handleFileSelectXYZ(event) {
+        //     selectedFilesXYZ = Array.from(event.target.files);
 
-            // DENGAN ELECTRON: Dapatkan full path
-            const filePathsWithInfo = selectedFilesXYZ.map(file => ({
-                name: file.name,
-                path: file.path,  // INI YANG PENTING! Hanya ada di Electron
-                size: file.size
-            }));
+        //     // DENGAN ELECTRON: Dapatkan full path
+        //     const filePathsWithInfo = selectedFilesXYZ.map(file => ({
+        //         name: file.name,
+        //         path: file.path,  // INI YANG PENTING! Hanya ada di Electron
+        //         size: file.size
+        //     }));
 
-            console.log('Full file paths:', filePathsWithInfo);
-            displayFileList(selectedFilesXYZ, 'fileListXYZ');
-        }
+        //     console.log('Full file paths:', filePathsWithInfo);
+        //     displayFileList(selectedFilesXYZ, 'fileListXYZ');
+        // }
 
         function displayFileList(files, containerId) {
             const container = document.getElementById(containerId);

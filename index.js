@@ -195,9 +195,9 @@ async function processAutomationMbtiles(sessionId, data) {
             await checkPauseAndAbort(sessionId);
 
             await iframe.locator('input[type="file"]').setInputFiles(filePaths[i]);
-            await iframe.getByText(' Registrasi Metadata ').click({ timeout: 99999999999 })
+            await iframe.getByText(' Registrasi Metadata ').click({ timeout: 0 })
 
-            await iframe.waitForSelector('xpath=//*[@id="f15"]/div[4]/input', { timeout: 99999999999 })
+            await iframe.locator('xpath=//*[@id="f15"]/div[4]/input').waitFor({ timeout: 0 })
 
             await checkPauseAndAbort(sessionId);
 
@@ -274,7 +274,7 @@ async function processAutomationXyztiles(sessionId, data) {
     const { resolusi, akurasi, tahunSurvey, sumberData, nomorHP, filePaths } = data;
 
     if (!browser) {
-        throw new Error('Browser not initialized. Please login first.');
+        throw new Error('Browser not initialized. Please login first or logout and re-login.');
     }
 
     // Initialize automation state
@@ -318,9 +318,9 @@ async function processAutomationXyztiles(sessionId, data) {
             await checkPauseAndAbort(sessionId);
 
             await iframe.locator('input[type="file"]').setInputFiles(filePaths[i]);
-            await iframe.getByText(' Registrasi XYZ').click({ timeout: 99999999999 });
+            await iframe.getByText(' Registrasi XYZ').click({ timeout: 0 });
 
-            await iframe.waitForSelector('xpath=//*[@id="f15"]/div[4]/input', { timeout: 99999999999 })
+            await iframe.locator('xpath=//*[@id="f15"]/div[4]/input').waitFor({ timeout: 0 })
 
             await checkPauseAndAbort(sessionId);
 

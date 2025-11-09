@@ -1,6 +1,9 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
+const { ipcMain, dialog } = require('electron');
+const fs = require('fs');
+
 // Import Express server
 const express_app = require('./index.js'); // Kita akan export dari server.js
 
@@ -11,9 +14,11 @@ function createWindow() {
         width: 1400,
         height: 900,
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-            enableRemoteModule: true
+            nodeIntegration: false,
+            contextIsolation: true,
+            enableRemoteModule: false,
+            sandbox: false,
+            preload: path.join(__dirname, 'preload.js')
         },
         icon: path.join(__dirname, 'assets/icon.png') // Optional
     });
@@ -43,4 +48,42 @@ app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         app.quit();
     }
+});
+
+// Handler untuk pilih file MBTiles
+ipcMain.handle('select-mbtiles', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openFile', 'multiSelections'],
+        filters: [{ name: 'MBTiles', extensions: ['mbtiles'] }]
+    });
+
+    if (result.canceled) return [];
+
+    return result.filePaths.map(filePath => {
+        const stats = fs.statSync(filePath);
+        return {
+            name: path.basename(filePath),
+            path: filePath,
+            size: stats.size
+        };
+    });
+});
+
+// Handler untuk XYZ
+ipcMain.handle('select-xyz', async () => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openFile', 'multiSelections'],
+        filters: [{ name: 'XYZ Files', extensions: ['xyz'] }]
+    });
+
+    if (result.canceled) return [];
+
+    return result.filePaths.map(filePath => {
+        const stats = fs.statSync(filePath);
+        return {
+            name: path.basename(filePath),
+            path: filePath,
+            size: stats.size
+        };
+    });
 });
