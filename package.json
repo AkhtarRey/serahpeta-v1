@@ -1,22 +1,55 @@
 {
-  "name": "restructure-051125",
+  "name": "serahpeta",
   "version": "1.0.0",
+  "description": "Otomasi Data Entry MB Tiles dan XYZ Tiles ke Website ATRBPN",
   "main": "main.js",
+  "author": "Wikrana",
+  "license": "ISC",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --enable-logging",
     "server": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish never",
+    "build:win": "electron-builder --win --publish never",
+    "build:mac": "electron-builder --mac --publish never",
+    "build:linux": "electron-builder --linux --publish never"
   },
-  "author": "",
-  "license": "ISC",
-  "description": "Automation Dashboard with Electron",
+  "build": {
+    "appId": "com.wikrana.serahpeta",
+    "productName": "Serah Peta",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Serah Peta"
+    }
+  },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "playwright": "^1.56.1"
   },
   "devDependencies": {
-    "electron": "^39.1.0"
+    "electron": "^39.1.0",
+    "electron-builder": "^25.1.8"
   }
 }
